@@ -928,14 +928,14 @@
   <section class="block" id="expense-section">
     <div class="block-head">
       <h2>月度收支</h2>
-      <div class="desc">月预算 4,000 全部纳入 · 吃饭 1,200 · 心愿 350 · 定投 800 · 缓冲 100</div>
+      <div class="desc">月预算 4,000 · 吃饭 1,200 · 心愿 350 · 定投 800 · 缓冲 100</div>
     </div>
 
     <div class="exp-summary">
       <div class="kpi">
         <div class="label">本月收入</div>
-        <div class="value" id="exp-income">¥ 1,000</div>
-        <div class="hint">主动收入（奖学金 + 兼职）</div>
+        <div class="value" id="exp-income">¥ 4,000</div>
+        <div class="hint">月可用总盘（含父母补贴）</div>
       </div>
       <div class="kpi">
         <div class="label">心愿已花</div>
@@ -1287,7 +1287,7 @@ function renderExpenses() {
   const heartPct = HEART_BUDGET ? (heartSpent / HEART_BUDGET) * 100 : 0;
 
   // KPI
-  document.getElementById('exp-income').textContent = fmt(PERSONAL_INCOME);
+  document.getElementById('exp-income').textContent = fmt(TOTAL_BUDGET);
   document.getElementById('exp-spent').textContent = fmt(heartSpent);
   document.getElementById('exp-remaining').textContent = fmt(Math.max(0, HEART_BUDGET - heartSpent));
 
