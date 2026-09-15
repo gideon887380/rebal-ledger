@@ -538,6 +538,159 @@
   .guide-card .compare-table .yes { color: var(--accent); }
   .guide-card .compare-table .no { color: var(--alert); }
 
+  /* ─── Expense tracker ────────────────────────────────── */
+  .exp-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .exp-summary .kpi { padding: 14px 16px; }
+  .exp-summary .kpi .label { font-size: 10px; }
+  .exp-summary .kpi .value { font-size: 20px; }
+  .exp-bar {
+    height: 6px;
+    background: var(--bg-elevated);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .exp-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.3s;
+  }
+  .exp-bar-fill.warn { background: var(--warn); }
+  .exp-bar-fill.alert { background: var(--alert); }
+
+  .exp-form {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+  .exp-form .row {
+    display: grid;
+    grid-template-columns: 120px 1fr 110px 1fr auto;
+    gap: 10px;
+    align-items: end;
+  }
+  .exp-form label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .exp-form input, .exp-form select {
+    font-family: var(--mono);
+  }
+  .exp-form select { font-family: var(--sans); }
+  .exp-form .add-btn {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: var(--accent);
+    padding: 8px 16px;
+    height: 34px;
+  }
+
+  .exp-list {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+  .exp-row {
+    display: grid;
+    grid-template-columns: 90px 90px 1fr auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+  .exp-row:last-child { border-bottom: none; }
+  .exp-row:hover { background: var(--bg-elevated); }
+  .exp-row .date {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .exp-row .cat-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--bg-card);
+    background: var(--cat-color, var(--text-muted));
+  }
+  .exp-row .note {
+    color: var(--text-muted);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .exp-row .amt {
+    font-family: var(--mono);
+    font-weight: 600;
+    text-align: right;
+  }
+  .exp-row .del {
+    background: transparent;
+    border: none;
+    color: var(--text-subtle);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--r-sm);
+    font-size: 16px;
+    line-height: 1;
+  }
+  .exp-row .del:hover { color: var(--alert); background: var(--alert-soft); }
+
+  .exp-empty {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--text-subtle);
+    font-size: 13px;
+  }
+
+  .exp-month-switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .exp-month-switch button {
+    padding: 4px 10px;
+    font-size: 14px;
+  }
+  .exp-month-switch .month-label {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 80px;
+    text-align: center;
+  }
+
+  @media (max-width: 720px) {
+    .exp-summary { grid-template-columns: repeat(2, 1fr); }
+    .exp-form .row {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+    }
+    .exp-form .add-btn { grid-column: 1 / -1; }
+    .exp-row {
+      grid-template-columns: 1fr auto auto;
+      grid-template-rows: auto auto;
+      row-gap: 4px;
+    }
+    .exp-row .date, .exp-row .note { font-size: 11px; }
+  }
+
   /* ─── Footer / actions ───────────────────────────────── */
   .actions {
     display: flex;
@@ -771,6 +924,77 @@
     </div>
   </section>
 
+  <!-- ─── Expense tracker ───────────────────────────── -->
+  <section class="block" id="expense-section">
+    <div class="block-head">
+      <h2>月度收支</h2>
+      <div class="desc">月度预算 1,000 元主动收入 · 心愿 450 · 定投 300 · 缓冲 250</div>
+    </div>
+
+    <div class="exp-summary">
+      <div class="kpi">
+        <div class="label">本月收入</div>
+        <div class="value" id="exp-income">¥ 1,000</div>
+        <div class="hint">主动收入（奖学金 + 兼职）</div>
+      </div>
+      <div class="kpi">
+        <div class="label">心愿已花</div>
+        <div class="value" id="exp-spent">¥ 0</div>
+        <div class="exp-bar"><div class="exp-bar-fill" id="exp-bar"></div></div>
+        <div class="hint">上限 450 元</div>
+      </div>
+      <div class="kpi">
+        <div class="label">心愿剩余</div>
+        <div class="value" id="exp-remaining">¥ 450</div>
+        <div class="hint">足够时定投可达 300</div>
+      </div>
+      <div class="kpi">
+        <div class="label">建议定投</div>
+        <div class="value" id="exp-dca-suggest">¥ 300</div>
+        <div class="hint" id="exp-dca-hint">心愿 < 60% 时拉满</div>
+      </div>
+    </div>
+
+    <div class="exp-form">
+      <div class="row">
+        <div>
+          <label>日期</label>
+          <input type="date" id="exp-date">
+        </div>
+        <div>
+          <label>类别</label>
+          <select id="exp-cat">
+            <option value="心愿">心愿</option>
+            <option value="生活">生活</option>
+            <option value="学习">学习</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div>
+          <label>金额 (元)</label>
+          <input type="number" id="exp-amt" min="0" step="1" placeholder="0">
+        </div>
+        <div>
+          <label>备注（可选）</label>
+          <input type="text" id="exp-note" placeholder="例：健身卡续费">
+        </div>
+        <button class="add-btn" id="exp-add">记一笔</button>
+      </div>
+    </div>
+
+    <div class="exp-list">
+      <div class="block-head" style="padding:14px 16px;margin-bottom:0;border-bottom:1px solid var(--border);">
+        <div style="font-family:var(--serif);font-size:18px;font-weight:400;">本月明细</div>
+        <div class="exp-month-switch">
+          <button id="exp-prev" title="上个月">‹</button>
+          <div class="month-label" id="exp-month-label">2026-09</div>
+          <button id="exp-next" title="下个月">›</button>
+        </div>
+      </div>
+      <div id="exp-rows"></div>
+    </div>
+  </section>
+
   <!-- ─── Footer ────────────────────────────────────── -->
   <div class="actions">
     <button id="btn-export">导出 JSON</button>
@@ -819,7 +1043,19 @@ const DEFAULT_STATE = {
     { label: 'Q2 2027', date: '', note: '' },
     { label: 'Q3 2027', date: '', note: '' },
   ],
+  expenses: [],          // { id, date: 'YYYY-MM-DD', cat: '心愿'|'生活'|'学习'|'其他', amt: number, note: '' }
+  expMonth: new Date().toISOString().slice(0, 7),   // 当前查看月份 YYYY-MM
 };
+
+const EXP_CATS = {
+  '心愿': { color: '#A8423E', budget: 450 },
+  '生活': { color: '#4F7A99', budget: 0 },     // 由父母补贴覆盖，不计入个人预算
+  '学习': { color: '#B8893A', budget: 0 },     // 大额由父母额外报销
+  '其他': { color: '#6B6258', budget: 0 },
+};
+const PERSONAL_INCOME = 1000;
+const DCA_TARGET = 300;
+const HEART_BUDGET = 450;
 
 let state = loadState();
 
@@ -1039,6 +1275,66 @@ function renderKPIs() {
   document.getElementById('holdings-total').textContent = fmt(total);
 }
 
+/* ─── Render: Expense tracker ─────────────────────────── */
+function renderExpenses() {
+  const month = state.expMonth;
+  document.getElementById('exp-month-label').textContent = month;
+
+  const monthExp = state.expenses.filter(e => e.date && e.date.slice(0, 7) === month);
+  const heartSpent = monthExp.filter(e => e.cat === '心愿').reduce((s, e) => s + e.amt, 0);
+  const remaining = HEART_BUDGET - heartSpent;
+  const heartPct = HEART_BUDGET ? (heartSpent / HEART_BUDGET) * 100 : 0;
+
+  // KPI
+  document.getElementById('exp-income').textContent = fmt(PERSONAL_INCOME);
+  document.getElementById('exp-spent').textContent = fmt(heartSpent);
+  document.getElementById('exp-remaining').textContent = fmt(Math.max(0, remaining));
+
+  // Bar
+  const bar = document.getElementById('exp-bar');
+  bar.style.width = Math.min(100, heartPct).toFixed(1) + '%';
+  bar.classList.remove('warn', 'alert');
+  if (heartPct >= 100) bar.classList.add('alert');
+  else if (heartPct >= 80) bar.classList.add('warn');
+
+  // DCA suggestion
+  let suggest = DCA_TARGET;
+  let hint = '心愿 < 60% 时拉满';
+  if (heartPct >= 100) { suggest = 0; hint = '心愿已超，建议本月不定投'; }
+  else if (heartPct >= 80) { suggest = 100; hint = '心愿接近上限，建议降定投'; }
+  else if (heartPct >= 60) { suggest = 200; hint = '心愿过半，建议适度降定投'; }
+  document.getElementById('exp-dca-suggest').textContent = fmt(suggest);
+  document.getElementById('exp-dca-hint').textContent = hint;
+
+  // List (newest first)
+  const rows = document.getElementById('exp-rows');
+  if (monthExp.length === 0) {
+    rows.innerHTML = '<div class="exp-empty">本月还没记账。点上面"记一笔"开始。</div>';
+    return;
+  }
+  const sorted = monthExp.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  rows.innerHTML = sorted.map(e => {
+    const meta = EXP_CATS[e.cat] || { color: '#6B6258' };
+    return `
+      <div class="exp-row">
+        <div class="date">${e.date || ''}</div>
+        <div><span class="cat-tag" style="background:${meta.color}">${e.cat}</span></div>
+        <div class="note">${e.note || ''}</div>
+        <div class="amt">¥ ${e.amt.toLocaleString('zh-CN')}</div>
+        <button class="del" data-id="${e.id}" title="删除">×</button>
+      </div>
+    `;
+  }).join('');
+  rows.querySelectorAll('.del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      state.expenses = state.expenses.filter(x => x.id !== id);
+      saveState();
+      renderExpenses();
+    });
+  });
+}
+
 /* ─── Render all ──────────────────────────────────────── */
 function renderAll() {
   renderHoldings();
@@ -1046,6 +1342,7 @@ function renderAll() {
   renderDCA();
   renderQuarters();
   renderKPIs();
+  renderExpenses();
 }
 
 /* ─── Theme ───────────────────────────────────────────── */
@@ -1119,6 +1416,39 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   }
 });
 document.getElementById('btn-save').addEventListener('click', () => { saveState(); toast('已保存'); });
+
+/* ─── Expense form events ─────────────────────────────── */
+document.getElementById('exp-date').value = todayIso();
+document.getElementById('exp-add').addEventListener('click', () => {
+  const date = document.getElementById('exp-date').value || todayIso();
+  const cat = document.getElementById('exp-cat').value;
+  const amt = Number(document.getElementById('exp-amt').value);
+  const note = document.getElementById('exp-note').value.trim();
+  if (!amt || amt <= 0) { toast('金额必须大于 0'); return; }
+  state.expenses.push({
+    id: 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    date, cat, amt, note,
+  });
+  saveState();
+  document.getElementById('exp-amt').value = '';
+  document.getElementById('exp-note').value = '';
+  renderExpenses();
+  toast('已记录');
+});
+document.getElementById('exp-prev').addEventListener('click', () => {
+  const [y, m] = state.expMonth.split('-').map(Number);
+  const d = new Date(y, m - 2, 1);
+  state.expMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  saveState();
+  renderExpenses();
+});
+document.getElementById('exp-next').addEventListener('click', () => {
+  const [y, m] = state.expMonth.split('-').map(Number);
+  const d = new Date(y, m, 1);
+  state.expMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  saveState();
+  renderExpenses();
+});
 
 renderAll();
 </script>
