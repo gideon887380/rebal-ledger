@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#F8F5EE">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="再平衡台账">
 <title>再平衡台账 · 学生模式</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -995,6 +1002,18 @@
     </div>
   </section>
 
+  <!-- ─── Reports ────────────────────────────────────── -->
+  <section class="block">
+    <div class="block-head">
+      <h2>周报 / 月报</h2>
+      <div class="desc">每周日 / 每月 1 号自动刷新 · 基于你的记账数据</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="kpi" style="padding:18px;" id="rep-weekly"></div>
+      <div class="kpi" style="padding:18px;" id="rep-monthly"></div>
+    </div>
+  </section>
+
   <!-- ─── Footer ────────────────────────────────────── -->
   <div class="actions">
     <button id="btn-export">导出 JSON</button>
@@ -1452,6 +1471,181 @@ document.getElementById('exp-next').addEventListener('click', () => {
 });
 
 renderAll();
+
+/* ─── PWA: Service Worker register ─────────────────────── */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(() => {
+    setTimeout(showInstallHint, 3000);
+  }).catch(err => console.warn('SW 失败:', err));
+}
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstall = e;
+  showInstallHint();
+});
+function showInstallHint() {
+  if (window.matchMedia('(display-mode: standalone)').matches) return;
+  if (document.getElementById('install-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'install-banner';
+  banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:var(--accent);color:var(--accent-text);padding:12px 16px;display:flex;align-items:center;gap:12px;font-size:13px;z-index:99;box-shadow:var(--shadow-md);';
+  banner.innerHTML = `
+    <span style="flex:1">📒 加到主屏幕，像 App 一样打开</span>
+    <button id="install-btn" style="background:var(--accent-text);color:var(--accent);border:none;padding:6px 12px;border-radius:6px;font-weight:600;cursor:pointer;">安装</button>
+    <button id="install-close" style="background:transparent;color:var(--accent-text);border:none;padding:6px 8px;cursor:pointer;opacity:0.7;font-size:16px;">×</button>
+  `;
+  document.body.appendChild(banner);
+  document.getElementById('install-btn').onclick = async () => {
+    if (deferredInstall) {
+      deferredInstall.prompt();
+      const { outcome } = await deferredInstall.userChoice;
+      if (outcome === 'accepted') banner.remove();
+      deferredInstall = null;
+    } else {
+      toast('iOS 需手动：Safari → 分享 → 添加到主屏幕');
+    }
+  };
+  document.getElementById('install-close').onclick = () => banner.remove();
+}
+
+/* ─── 价格提醒：东方财富免费接口 ─────────────────────── */
+const PRICE_API = 'https://push2.eastmoney.com/api/qt/stock/get?fields=f43,f44,f45,f46,f60,f170&invt=2&fltt=2';
+const PRICE_WATCH = [
+  { id: '1.510370', name: '中证 A500', threshold: 10 },
+];
+
+async function fetchPrice(secid) {
+  try {
+    const res = await fetch(`${PRICE_API}&secid=${secid}`);
+    const data = await res.json();
+    if (!data || !data.data) return null;
+    return {
+      price: data.data.f43 / 100,
+      high: data.data.f44 / 100,
+      low: data.data.f45 / 100,
+      prev: data.data.f46 / 100,
+      changePct: data.data.f170 / 100,
+    };
+  } catch (e) { return null; }
+}
+
+async function checkPrices() {
+  if (!state.priceAlert) state.priceAlert = {};
+  for (const w of PRICE_WATCH) {
+    const p = await fetchPrice(w.id);
+    if (!p) continue;
+    const last = state.priceAlert[w.id];
+    if (p.changePct <= -w.threshold && (!last || last.changePct > -w.threshold)) {
+      pushPriceAlert(w, p);
+    }
+    state.priceAlert[w.id] = p;
+  }
+  saveState();
+}
+
+function pushPriceAlert(w, p) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(`${w.name} 价格提醒`, {
+      body: `当前价 ¥${p.price.toFixed(3)}，较昨收 ${p.changePct.toFixed(2)}%，可能是补仓窗口`,
+      icon: 'icon.svg',
+    });
+  }
+  toast(`📉 ${w.name} ${p.changePct.toFixed(2)}%，检查一下补仓窗口`);
+}
+
+async function ensureNotifyPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    await Notification.requestPermission();
+  }
+}
+
+setTimeout(() => {
+  ensureNotifyPermission();
+  checkPrices();
+}, 5000);
+setInterval(checkPrices, 30 * 60 * 1000);
+
+/* ─── 周报 / 月报 ─────────────────────────────────────── */
+function summarizePeriod(startDate, endDate, label) {
+  const exps = state.expenses.filter(e => e.date && e.date >= startDate && e.date <= endDate);
+  const byCat = {};
+  let total = 0;
+  for (const e of exps) {
+    byCat[e.cat] = (byCat[e.cat] || 0) + e.amt;
+    total += e.amt;
+  }
+  return { label, total, byCat, count: exps.length };
+}
+
+function generateWeekly() {
+  const now = new Date();
+  const dow = now.getDay() || 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (dow - 1));
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const fmt = d => d.toISOString().slice(0, 10);
+  return summarizePeriod(fmt(monday), fmt(sunday), `${monday.getMonth() + 1}/${monday.getDate()} - ${sunday.getMonth() + 1}/${sunday.getDate()}`);
+}
+
+function generateMonthly(yearMonth) {
+  const [y, m] = yearMonth.split('-').map(Number);
+  const start = `${y}-${String(m).padStart(2, '0')}-01`;
+  const lastDay = new Date(y, m, 0).getDate();
+  const end = `${y}-${String(m).padStart(2, '0')}-${lastDay}`;
+  return summarizePeriod(start, end, `${y}年${m}月`);
+}
+
+function renderSummaryCards() {
+  const w = document.getElementById('rep-weekly');
+  const m = document.getElementById('rep-monthly');
+  if (w) w.innerHTML = renderSummaryHTML(generateWeekly(), '本周');
+  if (m) m.innerHTML = renderSummaryHTML(generateMonthly(state.expMonth), '本月');
+}
+
+function renderSummaryHTML(s, label) {
+  const catColors = { '心愿': '#A8423E', '生活': '#4F7A99', '学习': '#B8893A', '其他': '#6B6258' };
+  const cats = Object.entries(s.byCat).sort((a, b) => b[1] - a[1]);
+  const max = cats.length ? cats[0][1] : 0;
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+      <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">${label} · ${s.label}</span>
+      <span style="font-family:var(--mono);font-size:20px;font-weight:600;">¥ ${s.total.toLocaleString('zh-CN')}</span>
+    </div>
+    <div style="font-size:11px;color:var(--text-subtle);margin-bottom:12px;">${s.count} 笔记录</div>
+    ${cats.map(([c, v]) => `
+      <div style="display:grid;grid-template-columns:60px 1fr 70px;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;">
+        <span style="display:inline-flex;align-items:center;gap:6px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${catColors[c] || '#666'}"></span>
+          ${c}
+        </span>
+        <div style="height:8px;background:var(--bg-elevated);border-radius:4px;overflow:hidden;">
+          <div style="height:100%;width:${max ? (v/max*100) : 0}%;background:${catColors[c] || '#666'};opacity:0.8;"></div>
+        </div>
+        <span style="font-family:var(--mono);text-align:right;">¥ ${v.toLocaleString('zh-CN')}</span>
+      </div>
+    `).join('')}
+    ${cats.length === 0 ? '<div style="text-align:center;color:var(--text-subtle);font-size:12px;padding:16px;">还没有记录</div>' : ''}
+  `;
+}
+
+renderSummaryCards();
+setInterval(renderSummaryCards, 60 * 60 * 1000);
+
+const today = new Date();
+const lastReportDay = state.lastReportDay || '';
+const todayStr = today.toISOString().slice(0, 10);
+const isMonthStart = today.getDate() === 1;
+const isSunday = today.getDay() === 0;
+if ((isMonthStart || isSunday) && lastReportDay !== todayStr) {
+  setTimeout(() => {
+    state.lastReportDay = todayStr;
+    saveState();
+    toast(isMonthStart ? '📊 月报已生成，查看下方' : '📋 周报已生成，查看下方');
+  }, 2000);
+}
 </script>
 </body>
 </html>

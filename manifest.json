@@ -1,0 +1,19 @@
+{
+  "name": "再平衡台账 · 学生模式",
+  "short_name": "再平衡台账",
+  "description": "5 万本金 + 月投 800 + 月度预算 4,000 全部纳入跟踪",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8F5EE",
+  "theme_color": "#2E6B4F",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
