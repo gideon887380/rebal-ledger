@@ -756,7 +756,7 @@
   <header class="top">
     <div class="title-block">
       <h1>再平衡台账</h1>
-      <div class="sub">学生模式 · 5 万本金 · 月投 300 元 · 不持有独立应急金（父母兜底）</div>
+      <div class="sub">学生模式 · 5 万本金 · 月投 800 元 · 月预算 4,000（全部支出 + 定投 + 缓冲）</div>
     </div>
     <div class="header-right">
       <div class="theme-toggle" role="tablist">
@@ -928,7 +928,7 @@
   <section class="block" id="expense-section">
     <div class="block-head">
       <h2>月度收支</h2>
-      <div class="desc">月度预算 1,000 元主动收入 · 心愿 450 · 定投 300 · 缓冲 250</div>
+      <div class="desc">月预算 4,000 全部纳入 · 吃饭 1,200 · 心愿 350 · 定投 800 · 缓冲 100</div>
     </div>
 
     <div class="exp-summary">
@@ -941,16 +941,16 @@
         <div class="label">心愿已花</div>
         <div class="value" id="exp-spent">¥ 0</div>
         <div class="exp-bar"><div class="exp-bar-fill" id="exp-bar"></div></div>
-        <div class="hint">上限 450 元</div>
+        <div class="hint">上限 350 元</div>
       </div>
       <div class="kpi">
         <div class="label">心愿剩余</div>
-        <div class="value" id="exp-remaining">¥ 450</div>
-        <div class="hint">足够时定投可达 300</div>
+        <div class="value" id="exp-remaining">¥ 350</div>
+        <div class="hint">足够时定投可达 800</div>
       </div>
       <div class="kpi">
         <div class="label">建议定投</div>
-        <div class="value" id="exp-dca-suggest">¥ 300</div>
+        <div class="value" id="exp-dca-suggest">¥ 800</div>
         <div class="hint" id="exp-dca-hint">心愿 < 60% 时拉满</div>
       </div>
     </div>
@@ -1017,7 +1017,7 @@
 <script>
 /* ─── Categories ──────────────────────────────────────── */
 const CATS = [
-  { id: 'broad',  name: '宽基指数',   color: '#2E6B4F', target: 45, default: 22500, monthly: 300 },
+  { id: 'broad',  name: '宽基指数',   color: '#2E6B4F', target: 45, default: 22500, monthly: 800 },
   { id: 'bond',   name: '中长债基金', color: '#B8893A', target: 20, default: 10000, monthly: 0 },
   { id: 'theme',  name: '行业主题',   color: '#A8423E', target: 15, default:  7500, monthly: 0 },
   { id: 'gold',   name: '黄金 ETF',   color: '#7B6CD9', target: 10, default:  5000, monthly: 0 },
@@ -1031,7 +1031,7 @@ const DEFAULT_STATE = {
   startMonth: '2026-09',
   holdings: { broad: 22500, bond: 10000, theme: 7500, gold: 5000, cash: 5000 },
   dca: {
-    broad: { monthly: 300, paid: Array(12).fill(false) },
+    broad: { monthly: 800, paid: Array(12).fill(false) },
     bond:  { monthly:   0, paid: Array(12).fill(false) },
     theme: { monthly:   0, paid: Array(12).fill(false) },
     gold:  { monthly:   0, paid: Array(12).fill(false) },
@@ -1048,14 +1048,15 @@ const DEFAULT_STATE = {
 };
 
 const EXP_CATS = {
-  '心愿': { color: '#A8423E', budget: 450 },
+  '心愿': { color: '#A8423E', budget: 350 },
   '生活': { color: '#4F7A99', budget: 0 },     // 由父母补贴覆盖，不计入个人预算
   '学习': { color: '#B8893A', budget: 0 },     // 大额由父母额外报销
   '其他': { color: '#6B6258', budget: 0 },
 };
-const PERSONAL_INCOME = 1000;
-const DCA_TARGET = 300;
-const HEART_BUDGET = 450;
+const PERSONAL_INCOME = 1000;       // 主动收入（自己赚的）
+const TOTAL_BUDGET = 4000;          // 月可用总额（主动 + 父母）
+const DCA_TARGET = 800;
+const HEART_BUDGET = 350;
 
 let state = loadState();
 
@@ -1288,7 +1289,7 @@ function renderExpenses() {
   // KPI
   document.getElementById('exp-income').textContent = fmt(PERSONAL_INCOME);
   document.getElementById('exp-spent').textContent = fmt(heartSpent);
-  document.getElementById('exp-remaining').textContent = fmt(Math.max(0, remaining));
+  document.getElementById('exp-remaining').textContent = fmt(Math.max(0, HEART_BUDGET - heartSpent));
 
   // Bar
   const bar = document.getElementById('exp-bar');
