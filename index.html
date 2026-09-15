@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>再平衡台账</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ─── Tokens ─────────────────────────────────────────── */
+  :root {
+    --bg: #F8F5EE;
+    --bg-card: #FFFFFF;
+    --bg-elevated: #FBF8F1;
+    --border: #E5DED1;
+    --border-strong: #C9BFAD;
+    --text: #1A1714;
+    --text-muted: #6B6258;
+    --text-subtle: #9A9286;
+    --accent: #2E6B4F;
+    --accent-soft: #E5EFE9;
+    --accent-text: #FFFFFF;
+    --gold: #B8893A;
+    --gold-soft: #F1E7D2;
+    --warn: #C8884C;
+    --warn-soft: #F5E5D0;
+    --alert: #A8423E;
+    --alert-soft: #F2DDD9;
+    --shadow-sm: 0 1px 2px rgba(26,23,20,0.04);
+    --shadow-md: 0 1px 2px rgba(26,23,20,0.04), 0 4px 16px rgba(26,23,20,0.05);
+    --r-sm: 6px;
+    --r-md: 10px;
+    --r-lg: 14px;
+    --serif: 'Instrument Serif', 'Songti SC', 'STSong', serif;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161513;
+      --bg-card: #1F1C19;
+      --bg-elevated: #25211D;
+      --border: #2F2A24;
+      --border-strong: #443F37;
+      --text: #F0EBE0;
+      --text-muted: #9A9286;
+      --text-subtle: #6B6258;
+      --accent: #6BAA88;
+      --accent-soft: #2A4A3A;
+      --accent-text: #0F1A14;
+      --gold: #D4A85C;
+      --gold-soft: #3A2F1C;
+      --warn: #E0A465;
+      --warn-soft: #3F2E1A;
+      --alert: #D47068;
+      --alert-soft: #3F2422;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+      --shadow-md: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161513;
+    --bg-card: #1F1C19;
+    --bg-elevated: #25211D;
+    --border: #2F2A24;
+    --border-strong: #443F37;
+    --text: #F0EBE0;
+    --text-muted: #9A9286;
+    --text-subtle: #6B6258;
+    --accent: #6BAA88;
+    --accent-soft: #2A4A3A;
+    --accent-text: #0F1A14;
+    --gold: #D4A85C;
+    --gold-soft: #3A2F1C;
+    --warn: #E0A465;
+    --warn-soft: #3F2E1A;
+    --alert: #D47068;
+    --alert-soft: #3F2422;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+    --shadow-md: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.3);
+  }
+
+  /* ─── Reset & base ──────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text);
+    background: var(--bg);
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  button {
+    border: 1px solid var(--border-strong);
+    background: var(--bg-card);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  button:hover { background: var(--bg-elevated); border-color: var(--text-muted); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.primary {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: var(--accent);
+  }
+  button.primary:hover { filter: brightness(1.05); }
+  input[type="number"], input[type="text"], input[type="date"], textarea {
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    border-radius: var(--r-sm);
+    padding: 6px 8px;
+    width: 100%;
+    font-variant-numeric: tabular-nums;
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+
+  /* ─── Layout ─────────────────────────────────────────── */
+  .container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  /* ─── Header ─────────────────────────────────────────── */
+  header.top {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+  .title-block h1 {
+    font-family: var(--serif);
+    font-size: 44px;
+    font-weight: 400;
+    line-height: 1.05;
+    margin: 0 0 6px 0;
+    letter-spacing: -0.01em;
+  }
+  .title-block .sub {
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .theme-toggle {
+    display: flex;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-sm);
+    overflow: hidden;
+  }
+  .theme-toggle button {
+    border: none;
+    border-radius: 0;
+    padding: 6px 10px;
+    background: transparent;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .theme-toggle button.active {
+    background: var(--text);
+    color: var(--bg);
+  }
+
+  /* ─── KPI strip ──────────────────────────────────────── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .kpi {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 16px 18px;
+  }
+  .kpi .label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+  }
+  .kpi .value {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .kpi .hint {
+    font-size: 11px;
+    color: var(--text-subtle);
+    margin-top: 4px;
+  }
+  .kpi.accent { background: var(--accent-soft); border-color: transparent; }
+  .kpi.accent .value { color: var(--accent); }
+
+  /* ─── Section ────────────────────────────────────────── */
+  section.block {
+    margin-bottom: 40px;
+  }
+  .block-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .block-head h2 {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 400;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .block-head .desc {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* ─── Allocation table ───────────────────────────────── */
+  .alloc-table {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+  .alloc-row {
+    display: grid;
+    grid-template-columns: 110px 1fr 88px 88px 110px;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .alloc-row:last-child { border-bottom: none; }
+  .alloc-row:hover { background: var(--bg-elevated); }
+  .alloc-row .cat {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+  }
+  .alloc-row .cat .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--cat-color, var(--text-muted));
+    flex-shrink: 0;
+  }
+  .alloc-row .bar-wrap {
+    position: relative;
+    height: 24px;
+    background: var(--bg-elevated);
+    border-radius: var(--r-sm);
+    overflow: hidden;
+  }
+  .alloc-row .bar-fill {
+    height: 100%;
+    background: var(--cat-color, var(--text-muted));
+    opacity: 0.85;
+    transition: width 0.3s;
+  }
+  .alloc-row .bar-target {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: var(--gold);
+    z-index: 2;
+  }
+  .alloc-row .bar-target::after {
+    content: '▼';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--gold);
+    font-size: 10px;
+    line-height: 1;
+  }
+  .alloc-row .num {
+    font-family: var(--mono);
+    text-align: right;
+    font-weight: 500;
+    font-size: 14px;
+  }
+  .alloc-row .pct { color: var(--text-muted); font-size: 13px; }
+  .alloc-row .status {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    text-align: center;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .alloc-row .status.ok { background: var(--accent-soft); color: var(--accent); }
+  .alloc-row .status.warn { background: var(--warn-soft); color: var(--warn); }
+  .alloc-row .status.alert { background: var(--alert-soft); color: var(--alert); }
+
+  /* ─── Holdings editor ────────────────────────────────── */
+  .holdings {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 18px;
+    margin-bottom: 24px;
+  }
+  .holdings-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+  }
+  .holding-cell label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .holding-cell input { font-family: var(--mono); }
+  .total-cell {
+    grid-column: 1 / -1;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .total-cell strong {
+    font-family: var(--mono);
+    font-size: 18px;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* ─── DCA grid ───────────────────────────────────────── */
+  .dca-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 18px;
+    margin-bottom: 12px;
+  }
+  .dca-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .dca-head .name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+  }
+  .dca-head .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .dca-head .monthly {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .dca-head .monthly input {
+    width: 80px;
+    font-family: var(--mono);
+    text-align: right;
+  }
+  .dca-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 6px;
+  }
+  .dca-cell {
+    aspect-ratio: 1;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--bg-card);
+    position: relative;
+    user-select: none;
+  }
+  .dca-cell:hover { border-color: var(--cat-color, var(--text-muted)); }
+  .dca-cell.done {
+    background: var(--cat-color, var(--accent));
+    border-color: var(--cat-color, var(--accent));
+    color: var(--accent-text);
+  }
+  .dca-cell .m {
+    font-size: 10px;
+    font-weight: 500;
+  }
+  .dca-cell .amt {
+    font-family: var(--mono);
+    font-size: 9px;
+    opacity: 0.7;
+  }
+  .dca-cell.done .amt { opacity: 0.9; }
+  .dca-legend {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .dca-legend .progress {
+    font-family: var(--mono);
+    color: var(--text);
+  }
+
+  /* ─── Quarterly log ──────────────────────────────────── */
+  .q-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .q-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 18px;
+  }
+  .q-card .q-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .q-card .q-label {
+    font-family: var(--serif);
+    font-size: 22px;
+    line-height: 1;
+  }
+  .q-card .q-tag {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--bg-elevated);
+    color: var(--text-muted);
+  }
+  .q-card input[type="date"] {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .q-card textarea {
+    min-height: 64px;
+    resize: vertical;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  .q-card .q-foot {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--text-subtle);
+  }
+
+  /* ─── Guide ──────────────────────────────────────────── */
+  .guide-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .guide-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 22px 24px;
+  }
+  .guide-card h3 {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 400;
+    margin: 0 0 4px 0;
+  }
+  .guide-card .eyebrow {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+  }
+  .guide-card p, .guide-card li {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.65;
+  }
+  .guide-card ul {
+    padding-left: 18px;
+    margin: 8px 0;
+  }
+  .guide-card ul li { margin-bottom: 4px; }
+  .guide-card strong { color: var(--accent); font-weight: 600; }
+  .guide-card .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+  .guide-card .compare-table th,
+  .guide-card .compare-table td {
+    border-bottom: 1px solid var(--border);
+    padding: 8px 6px;
+    text-align: left;
+    vertical-align: top;
+  }
+  .guide-card .compare-table th {
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .guide-card .compare-table td:first-child { font-weight: 500; }
+  .guide-card .compare-table .yes { color: var(--accent); }
+  .guide-card .compare-table .no { color: var(--alert); }
+
+  /* ─── Footer / actions ───────────────────────────────── */
+  .actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 16px 0;
+    border-top: 1px solid var(--border);
+    margin-top: 32px;
+    align-items: center;
+  }
+  .actions .grow { flex: 1; }
+  .disclaimer {
+    font-size: 11px;
+    color: var(--text-subtle);
+    line-height: 1.6;
+    padding: 16px 0;
+    border-top: 1px dashed var(--border);
+  }
+
+  /* ─── Notice toast ───────────────────────────────────── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text);
+    color: var(--bg);
+    padding: 10px 18px;
+    border-radius: var(--r-md);
+    font-size: 13px;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s;
+    z-index: 100;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ─── Responsive ─────────────────────────────────────── */
+  @media (max-width: 720px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .alloc-row {
+      grid-template-columns: 80px 1fr 70px;
+      grid-template-rows: auto auto;
+      row-gap: 6px;
+    }
+    .alloc-row .pct, .alloc-row .status { grid-column: span 1; }
+    .holdings-grid { grid-template-columns: repeat(2, 1fr); }
+    .q-grid, .guide-grid { grid-template-columns: 1fr; }
+    .dca-grid { grid-template-columns: repeat(6, 1fr); }
+    header.top { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ─── Header ─────────────────────────────────────── -->
+  <header class="top">
+    <div class="title-block">
+      <h1>再平衡台账</h1>
+      <div class="sub">5 万 / 长期持有 / 高波动承受 · 月度打勾 · 季度调仓</div>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle" role="tablist">
+        <button data-theme="light" title="浅色">☀</button>
+        <button data-theme="system" title="跟随系统">◐</button>
+        <button data-theme="dark" title="深色">☾</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── KPI ───────────────────────────────────────── -->
+  <div class="kpi-row">
+    <div class="kpi accent">
+      <div class="label">当前持仓总值</div>
+      <div class="value" id="kpi-total">¥ 0</div>
+      <div class="hint">5 类资产合计</div>
+    </div>
+    <div class="kpi">
+      <div class="label">年内定投累计</div>
+      <div class="value" id="kpi-invested">¥ 0</div>
+      <div class="hint">已打勾的实际投入</div>
+    </div>
+    <div class="kpi">
+      <div class="label">最大偏离</div>
+      <div class="value" id="kpi-dev">— %</div>
+      <div class="hint">绝对值最大的类别</div>
+    </div>
+    <div class="kpi">
+      <div class="label">下次再平衡窗口</div>
+      <div class="value" id="kpi-next">—</div>
+      <div class="hint">季度末或偏离 > 5%</div>
+    </div>
+  </div>
+
+  <!-- ─── Holdings editor ───────────────────────────── -->
+  <section class="block">
+    <div class="block-head">
+      <h2>当前持仓</h2>
+      <div class="desc">填入账户里每类资产的当前市值（每月更新一次即可）</div>
+    </div>
+    <div class="holdings">
+      <div class="holdings-grid" id="holdings-grid"></div>
+      <div class="total-cell">
+        <span>合计</span>
+        <strong id="holdings-total">¥ 0</strong>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Allocation table ──────────────────────────── -->
+  <section class="block">
+    <div class="block-head">
+      <h2>配置偏离</h2>
+      <div class="desc">柱形长度 = 实际占比，金色三角 = 目标位</div>
+    </div>
+    <div class="alloc-table" id="alloc-table"></div>
+  </section>
+
+  <!-- ─── Monthly DCA ───────────────────────────────── -->
+  <section class="block">
+    <div class="block-head">
+      <h2>月度定投</h2>
+      <div class="desc">12 个月从起始月起，点击方格打勾；只有打勾的金额会计入"已投入"</div>
+    </div>
+    <div id="dca-container"></div>
+  </section>
+
+  <!-- ─── Quarterly log ─────────────────────────────── -->
+  <section class="block">
+    <div class="block-head">
+      <h2>季度再平衡日志</h2>
+      <div class="desc">每季度末复盘：实际比例 / 目标比例 / 调仓动作（卖 X 买 Y）</div>
+    </div>
+    <div class="q-grid" id="q-grid"></div>
+  </section>
+
+  <!-- ─── Guide ─────────────────────────────────────── -->
+  <section class="block">
+    <div class="block-head">
+      <h2>配置指南</h2>
+      <div class="desc">不是教科书，是这份台账配套的"为什么"</div>
+    </div>
+    <div class="guide-grid">
+
+      <div class="guide-card">
+        <div class="eyebrow">宽基选择</div>
+        <h3>定投哪只宽基？</h3>
+        <p>A 股宽基按"市值覆盖度"和"行业均衡度"两条线选。对于 25 岁以下、5 年以上持有的画像，<strong>不要在 5 只以上指数上分散精力</strong>。</p>
+        <ul>
+          <li><strong>沪深 300</strong>（000300）：300 只大盘，A股"压舱石"，费率最低、跟踪最久</li>
+          <li><strong>中证 A500</strong>（000510）：2024-09 新发的"国家队"指数，500 只，覆盖更接近标普 500，行业更均衡</li>
+          <li><strong>中证 500</strong>（000905）：中盘股，波动比沪深 300 大 30%，补中盘暴露</li>
+          <li><strong>中证红利</strong>（000922）：高分红低波动，熊市抗跌但牛市跟不上</li>
+          <li><strong>创业板指 / 科创 50</strong>：成长风格，波动巨大，新手单独配置慎入</li>
+        </ul>
+        <p>三种组合思路：</p>
+        <ul>
+          <li><strong>懒人型</strong>：100% 中证 A500 —— 一只覆盖 A 股核心</li>
+          <li><strong>标准型</strong>：60% A500 + 25% 沪深 300 + 15% 中证 500</li>
+          <li><strong>全球型</strong>：50% A500 + 30% 沪深 300 + 20% 纳斯达克 100（QDII）</li>
+        </ul>
+      </div>
+
+      <div class="guide-card">
+        <div class="eyebrow">场内 vs 场外</div>
+        <h3>ETF 还是基金联接？</h3>
+        <p>同一只指数既可以买<strong>场内 ETF</strong>（在券商账户像股票一样买卖），也可以买<strong>场外基金联接</strong>（在天天基金 / 蚂蚁基金 / 银行 App 申赎）。</p>
+        <table class="compare-table">
+          <tr><th></th><th>场内 ETF</th><th>场外联接</th></tr>
+          <tr><td>交易</td><td>实时报价</td><td>T+1 净值确认</td></tr>
+          <tr><td>资金门槛</td><td>1 手 = 100 份起</td><td class="yes">1 元起</td></tr>
+          <tr><td>主要费用</td><td>佣金（通常 1 元起）</td><td>申购费（A 类 1 折 ≈ 0.1%）</td></tr>
+          <tr><td>自动定投</td><td>需手动或条件单</td><td class="yes">可设自动扣款</td></tr>
+          <tr><td>套利 / 择时</td><td class="yes">支持</td><td class="no">不支持</td></tr>
+        </table>
+        <p style="margin-top:12px;"><strong>实操建议</strong>：</p>
+        <ul>
+          <li><strong>自动定投</strong>走场外 A 类联接，省心、不用盯盘</li>
+          <li><strong>季度再平衡</strong>想"低买高卖"时切到场内 ETF（价格透明、可挂限价单）</li>
+          <li>避免<strong>同一指数既买场内又买场外</strong>——重复且费率双倍</li>
+          <li>5 万这个量级，<strong>别为了省 0.05% 的费率折腾</strong>，一致性比费率重要</li>
+        </ul>
+      </div>
+
+      <div class="guide-card">
+        <div class="eyebrow">再平衡频率</div>
+        <h3>什么时候调仓？</h3>
+        <p>再平衡的两条触发线，<strong>任一满足即可</strong>：</p>
+        <ul>
+          <li><strong>时间触发</strong>：每季度末（3/31、6/30、9/30、12/31）固定打开台账看一眼</li>
+          <li><strong>阈值触发</strong>：任一类别偏离目标 <strong>> 5 个百分点</strong>（这台账的"再平衡"红色状态）</li>
+        </ul>
+        <p><strong>操作思路（"涨多的卖一点，跌多的补一点"）</strong>：</p>
+        <ul>
+          <li>把高出目标的份额<strong>止盈到货币基金</strong>（不要直接转成另一只股票资产）</li>
+          <li>用货币基金里的现金 + 当月新增定投，<strong>买入低于目标的类别</strong></li>
+          <li><strong>不要全卖一个、重仓一个</strong>——再平衡的边际意义是回归，不是押注</li>
+        </ul>
+        <p><strong>要避开的误区</strong>：</p>
+        <ul>
+          <li>每天看净值（每月看一次足够，频繁操作会诱发高买低卖）</li>
+          <li>觉得"再平衡 = 现在要涨"，它只是把比例拉回正轨，不预测方向</li>
+        </ul>
+      </div>
+
+      <div class="guide-card">
+        <div class="eyebrow">品种速查</div>
+        <h3>产品怎么选？</h3>
+        <p>同一指数可能有很多只 ETF / 联接基金，选产品时<strong>只比 4 个指标</strong>：</p>
+        <ul>
+          <li><strong>规模</strong>：> 10 亿为佳，规模太小有清盘风险</li>
+          <li><strong>费率</strong>：管理费 + 托管费合计，越低越好（同指数头部差距通常 ≤ 0.1%/年）</li>
+          <li><strong>跟踪误差</strong>：过去 1 年日均跟踪误差 < 0.05% 为佳</li>
+          <li><strong>成立时间</strong>：> 3 年优先，避开新发基金</li>
+        </ul>
+        <p><strong>查找路径</strong>（不替你选具体产品）：</p>
+        <ul>
+          <li>天天基金 / 蚂蚁基金 → 搜指数名 → 看"规模 / 费率 / 跟踪误差"三栏</li>
+          <li>证监会官网 → "基金信息披露" → 查季报里的持有人结构和持仓</li>
+          <li>不选名字带"增强"二字的 —— 那是主动管理，偏离指数、费率更高</li>
+        </ul>
+        <p style="margin-top:12px; font-size:11px; color:var(--text-muted);">本台账不展示具体产品代码，请按以上 4 指标在合规平台自查。</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── Footer ────────────────────────────────────── -->
+  <div class="actions">
+    <button id="btn-export">导出 JSON</button>
+    <button id="btn-import">导入 JSON</button>
+    <input type="file" id="file-input" accept=".json,application/json" hidden>
+    <span class="grow"></span>
+    <button id="btn-reset">重置为示例</button>
+    <button class="primary" id="btn-save">保存（自动）</button>
+  </div>
+
+  <p class="disclaimer">
+    本工具为通用记账与配比可视化模板，不构成投资建议。具体产品代码、费率、申赎规则请以你开户券商 / 银行 / 基金销售机构的当日公告为准。
+    数据保存在你本地浏览器（localStorage），清缓存会丢，请定期"导出 JSON"备份。
+  </p>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ─── Categories ──────────────────────────────────────── */
+const CATS = [
+  { id: 'broad',  name: '宽基指数',   color: '#2E6B4F', target: 45, default: 22500, monthly: 1900 },
+  { id: 'bond',   name: '中长债基金', color: '#B8893A', target: 20, default: 10000, monthly: 0 },
+  { id: 'theme',  name: '行业主题',   color: '#A8423E', target: 15, default:  7500, monthly: 0 },
+  { id: 'gold',   name: '黄金 ETF',   color: '#7B6CD9', target: 10, default:  5000, monthly: 0 },
+  { id: 'cash',   name: '货币基金',   color: '#4F7A99', target: 10, default:  5000, monthly: 0 },
+];
+
+/* ─── State ───────────────────────────────────────────── */
+const STORAGE_KEY = 'rebal-ledger-v1';
+
+const DEFAULT_STATE = {
+  startMonth: '2026-09',
+  holdings: { broad: 22500, bond: 10000, theme: 7500, gold: 5000, cash: 5000 },
+  dca: {
+    broad: { monthly: 1900, paid: Array(12).fill(false) },
+    bond:  { monthly:    0, paid: Array(12).fill(false) },
+    theme: { monthly:    0, paid: Array(12).fill(false) },
+    gold:  { monthly:    0, paid: Array(12).fill(false) },
+    cash:  { monthly:    0, paid: Array(12).fill(false) },
+  },
+  quarters: [
+    { label: 'Q4 2026', date: '', note: '' },
+    { label: 'Q1 2027', date: '', note: '' },
+    { label: 'Q2 2027', date: '', note: '' },
+    { label: 'Q3 2027', date: '', note: '' },
+  ],
+};
+
+let state = loadState();
+
+/* ─── Persistence ─────────────────────────────────────── */
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return Object.assign({}, DEFAULT_STATE, JSON.parse(raw));
+  } catch (e) {}
+  return JSON.parse(JSON.stringify(DEFAULT_STATE));
+}
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch (e) { toast('保存失败：' + e.message); }
+}
+
+/* ─── Helpers ─────────────────────────────────────────── */
+function fmt(n) {
+  return '¥ ' + Math.round(n).toLocaleString('zh-CN');
+}
+function monthList(start) {
+  const [y, m] = start.split('-').map(Number);
+  const out = [];
+  for (let i = 0; i < 12; i++) {
+    const mm = ((m - 1 + i) % 12) + 1;
+    const yy = y + Math.floor((m - 1 + i) / 12);
+    out.push({ y: yy, m: mm, label: `${yy}-${String(mm).padStart(2, '0')}` });
+  }
+  return out;
+}
+function todayIso() { return new Date().toISOString().slice(0, 10); }
+function nextQuarterEnd() {
+  const now = new Date();
+  const qEnds = ['03-31', '06-30', '09-30', '12-31'];
+  for (const q of qEnds) {
+    const d = new Date(`${now.getFullYear()}-${q}`);
+    if (d > now) return `${d.getFullYear()}-${q}`;
+  }
+  return `${now.getFullYear() + 1}-03-31`;
+}
+function deviation(actualPct, targetPct) {
+  return actualPct - targetPct;
+}
+function statusLevel(dev) {
+  const a = Math.abs(dev);
+  if (a <= 2) return 'ok';
+  if (a <= 5) return 'warn';
+  return 'alert';
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* ─── Render: Holdings ────────────────────────────────── */
+function renderHoldings() {
+  const g = document.getElementById('holdings-grid');
+  g.innerHTML = '';
+  CATS.forEach(c => {
+    const cell = document.createElement('div');
+    cell.className = 'holding-cell';
+    cell.innerHTML = `
+      <label>${c.name}</label>
+      <input type="number" min="0" step="100" value="${state.holdings[c.id] || 0}" data-cat="${c.id}">
+    `;
+    cell.querySelector('input').addEventListener('input', e => {
+      state.holdings[c.id] = Number(e.target.value) || 0;
+      saveState();
+      renderAll();
+    });
+    g.appendChild(cell);
+  });
+}
+
+/* ─── Render: Allocation table ────────────────────────── */
+function renderAlloc() {
+  const t = document.getElementById('alloc-table');
+  t.innerHTML = '';
+  const total = CATS.reduce((s, c) => s + (state.holdings[c.id] || 0), 0);
+
+  CATS.forEach(c => {
+    const actual = state.holdings[c.id] || 0;
+    const actualPct = total ? (actual / total) * 100 : 0;
+    const dev = deviation(actualPct, c.target);
+    const status = statusLevel(dev);
+
+    // Scale bar width so that 50% maps to 50% of bar width (max visible = 50%)
+    const barPct = Math.min(actualPct, 60) * 2; // so 30% looks like 60% of bar
+    const targetPct = Math.min(c.target, 60) * 2;
+
+    const row = document.createElement('div');
+    row.className = 'alloc-row';
+    row.style.setProperty('--cat-color', c.color);
+    row.innerHTML = `
+      <div class="cat"><span class="dot"></span>${c.name}</div>
+      <div class="bar-wrap">
+        <div class="bar-fill" style="width: ${barPct}%"></div>
+        <div class="bar-target" style="left: ${targetPct}%"></div>
+      </div>
+      <div class="num">${fmt(actual)}</div>
+      <div class="num pct">${actualPct.toFixed(1)}%</div>
+      <div><span class="status ${status}">${status === 'ok' ? '正常' : status === 'warn' ? '关注' : '再平衡'} ${dev >= 0 ? '+' : ''}${dev.toFixed(1)}</span></div>
+    `;
+    t.appendChild(row);
+  });
+}
+
+/* ─── Render: DCA grid ────────────────────────────────── */
+function renderDCA() {
+  const wrap = document.getElementById('dca-container');
+  wrap.innerHTML = '';
+  const months = monthList(state.startMonth);
+
+  CATS.forEach(c => {
+    const dca = state.dca[c.id];
+    let paidCount = 0;
+    let paidAmount = 0;
+    months.forEach((mo, i) => {
+      if (dca.paid[i]) { paidCount++; paidAmount += dca.monthly; }
+    });
+
+    const card = document.createElement('div');
+    card.className = 'dca-card';
+    card.style.setProperty('--cat-color', c.color);
+    card.innerHTML = `
+      <div class="dca-head">
+        <div class="name"><span class="dot" style="background:${c.color}"></span>${c.name}</div>
+        <div class="monthly">
+          <span>月投</span>
+          <input type="number" min="0" step="100" value="${dca.monthly}" data-cat="${c.id}" data-field="monthly">
+          <span>元</span>
+        </div>
+      </div>
+      <div class="dca-grid" data-cat="${c.id}"></div>
+      <div class="dca-legend">
+        <span>${months[0].label} → ${months[11].label}</span>
+        <span class="progress">${paidCount}/12 · ${fmt(paidAmount)}</span>
+      </div>
+    `;
+
+    const grid = card.querySelector('.dca-grid');
+    months.forEach((mo, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'dca-cell' + (dca.paid[i] ? ' done' : '');
+      cell.title = `${mo.label} · ${fmt(dca.monthly)}`;
+      cell.innerHTML = `<div class="m">${mo.m}月</div><div class="amt">${dca.monthly ? Math.round(dca.monthly/100)/10 + 'k' : '·'}</div>`;
+      cell.addEventListener('click', () => {
+        state.dca[c.id].paid[i] = !state.dca[c.id].paid[i];
+        saveState();
+        renderAll();
+      });
+      grid.appendChild(cell);
+    });
+
+    card.querySelector('input[data-field="monthly"]').addEventListener('input', e => {
+      state.dca[c.id].monthly = Number(e.target.value) || 0;
+      saveState();
+      renderAll();
+    });
+
+    wrap.appendChild(card);
+  });
+}
+
+/* ─── Render: Quarterly log ───────────────────────────── */
+function renderQuarters() {
+  const wrap = document.getElementById('q-grid');
+  wrap.innerHTML = '';
+  state.quarters.forEach((q, i) => {
+    const card = document.createElement('div');
+    card.className = 'q-card';
+    const filled = q.date && q.note;
+    card.innerHTML = `
+      <div class="q-head">
+        <div class="q-label">${q.label}</div>
+        <div class="q-tag">${filled ? '已记录' : '待复盘'}</div>
+      </div>
+      <input type="date" value="${q.date || ''}" data-q="${i}" data-field="date">
+      <textarea placeholder="例：宽基涨至 52%，止盈 3500 元到货币基金；债 < 18%，补 2000 元。&#10;或写：维持原状，偏离均在 ±3% 以内。" data-q="${i}" data-field="note">${q.note || ''}</textarea>
+      <div class="q-foot">季度末建议日：${q.label.includes('Q1') ? '03-31' : q.label.includes('Q2') ? '06-30' : q.label.includes('Q3') ? '09-30' : '12-31'}</div>
+    `;
+    card.querySelectorAll('[data-q]').forEach(el => {
+      el.addEventListener('input', e => {
+        const idx = Number(e.target.dataset.q);
+        const field = e.target.dataset.field;
+        state.quarters[idx][field] = e.target.value;
+        saveState();
+        renderQuarters();
+      });
+    });
+    wrap.appendChild(card);
+  });
+}
+
+/* ─── Render: KPIs ────────────────────────────────────── */
+function renderKPIs() {
+  const total = CATS.reduce((s, c) => s + (state.holdings[c.id] || 0), 0);
+  let invested = 0;
+  CATS.forEach(c => {
+    state.dca[c.id].paid.forEach(p => { if (p) invested += state.dca[c.id].monthly; });
+  });
+  let maxDev = 0;
+  if (total > 0) {
+    CATS.forEach(c => {
+      const ap = (state.holdings[c.id] / total) * 100;
+      maxDev = Math.max(maxDev, Math.abs(ap - c.target));
+    });
+  }
+
+  document.getElementById('kpi-total').textContent = fmt(total);
+  document.getElementById('kpi-invested').textContent = fmt(invested);
+  document.getElementById('kpi-dev').textContent = (total > 0 ? maxDev.toFixed(1) : '—') + ' %';
+  document.getElementById('kpi-next').textContent = (maxDev > 5 ? '建议立即再平衡' : nextQuarterEnd());
+  document.getElementById('holdings-total').textContent = fmt(total);
+}
+
+/* ─── Render all ──────────────────────────────────────── */
+function renderAll() {
+  renderHoldings();
+  renderAlloc();
+  renderDCA();
+  renderQuarters();
+  renderKPIs();
+}
+
+/* ─── Theme ───────────────────────────────────────────── */
+function applyTheme(t) {
+  if (t === 'system') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', t);
+  document.querySelectorAll('.theme-toggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.theme === t);
+  });
+  try { localStorage.setItem(STORAGE_KEY + '-theme', t); } catch (e) {}
+}
+function loadTheme() {
+  try { return localStorage.getItem(STORAGE_KEY + '-theme') || 'system'; }
+  catch (e) { return 'system'; }
+}
+
+/* ─── Import / Export ─────────────────────────────────── */
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `rebal-${todayIso()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('已导出 JSON');
+}
+function importJSON(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      // shallow validate
+      if (!parsed.holdings || !parsed.dca || !parsed.quarters) throw new Error('格式不符');
+      state = Object.assign({}, DEFAULT_STATE, parsed);
+      // ensure arrays length
+      CATS.forEach(c => {
+        if (!state.dca[c.id]) state.dca[c.id] = { monthly: c.monthly, paid: Array(12).fill(false) };
+        if (state.dca[c.id].paid.length !== 12) {
+          state.dca[c.id].paid = Array(12).fill(false).map((_, i) => !!state.dca[c.id].paid[i]);
+        }
+      });
+      saveState();
+      renderAll();
+      toast('已导入');
+    } catch (err) {
+      toast('导入失败：' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ─── Init ────────────────────────────────────────────── */
+document.querySelectorAll('.theme-toggle button').forEach(b => {
+  b.addEventListener('click', () => applyTheme(b.dataset.theme));
+});
+applyTheme(loadTheme());
+
+document.getElementById('btn-export').addEventListener('click', exportJSON);
+document.getElementById('btn-import').addEventListener('click', () => document.getElementById('file-input').click());
+document.getElementById('file-input').addEventListener('change', e => {
+  if (e.target.files[0]) importJSON(e.target.files[0]);
+  e.target.value = '';
+});
+document.getElementById('btn-reset').addEventListener('click', () => {
+  if (confirm('确定重置为示例数据？当前持仓、定投记录、调仓日志都会清空。建议先导出 JSON 备份。')) {
+    state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    saveState();
+    renderAll();
+    toast('已重置为示例');
+  }
+});
+document.getElementById('btn-save').addEventListener('click', () => { saveState(); toast('已保存'); });
+
+renderAll();
+</script>
+</body>
+</html>
