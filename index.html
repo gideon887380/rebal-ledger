@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>再平衡台账</title>
+<title>再平衡台账 · 学生模式</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -603,7 +603,7 @@
   <header class="top">
     <div class="title-block">
       <h1>再平衡台账</h1>
-      <div class="sub">5 万 / 长期持有 / 高波动承受 · 月度打勾 · 季度调仓</div>
+      <div class="sub">学生模式 · 5 万本金 · 月投 300 元 · 不持有独立应急金（父母兜底）</div>
     </div>
     <div class="header-right">
       <div class="theme-toggle" role="tablist">
@@ -793,7 +793,7 @@
 <script>
 /* ─── Categories ──────────────────────────────────────── */
 const CATS = [
-  { id: 'broad',  name: '宽基指数',   color: '#2E6B4F', target: 45, default: 22500, monthly: 1900 },
+  { id: 'broad',  name: '宽基指数',   color: '#2E6B4F', target: 45, default: 22500, monthly: 300 },
   { id: 'bond',   name: '中长债基金', color: '#B8893A', target: 20, default: 10000, monthly: 0 },
   { id: 'theme',  name: '行业主题',   color: '#A8423E', target: 15, default:  7500, monthly: 0 },
   { id: 'gold',   name: '黄金 ETF',   color: '#7B6CD9', target: 10, default:  5000, monthly: 0 },
@@ -807,11 +807,11 @@ const DEFAULT_STATE = {
   startMonth: '2026-09',
   holdings: { broad: 22500, bond: 10000, theme: 7500, gold: 5000, cash: 5000 },
   dca: {
-    broad: { monthly: 1900, paid: Array(12).fill(false) },
-    bond:  { monthly:    0, paid: Array(12).fill(false) },
-    theme: { monthly:    0, paid: Array(12).fill(false) },
-    gold:  { monthly:    0, paid: Array(12).fill(false) },
-    cash:  { monthly:    0, paid: Array(12).fill(false) },
+    broad: { monthly: 300, paid: Array(12).fill(false) },
+    bond:  { monthly:   0, paid: Array(12).fill(false) },
+    theme: { monthly:   0, paid: Array(12).fill(false) },
+    gold:  { monthly:   0, paid: Array(12).fill(false) },
+    cash:  { monthly:   0, paid: Array(12).fill(false) },
   },
   quarters: [
     { label: 'Q4 2026', date: '', note: '' },
