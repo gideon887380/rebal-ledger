@@ -1,5 +1,5 @@
 /* Service Worker · 再平衡台账 */
-const CACHE = 'rebal-ledger-v3';
+const CACHE = 'rebal-ledger-v4';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {

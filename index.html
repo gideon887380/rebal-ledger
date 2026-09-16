@@ -684,7 +684,7 @@
   }
 
   @media (max-width: 720px) {
-    .exp-summary { grid-template-columns: repeat(2, 1fr); }
+    .exp-summary { grid-template-columns: repeat(2, 1fr) !important; }
     .exp-form .row {
       grid-template-columns: 1fr 1fr;
       grid-template-rows: auto auto;
@@ -938,11 +938,16 @@
       <div class="desc">月预算 4,000 · 吃饭 1,200 · 心愿 350 · 定投 800 · 缓冲 100</div>
     </div>
 
-    <div class="exp-summary">
+    <div class="exp-summary" style="grid-template-columns: repeat(5, 1fr);">
       <div class="kpi">
         <div class="label">本月收入</div>
         <div class="value" id="exp-income">¥ 4,000</div>
-        <div class="hint">月可用总盘（含父母补贴）</div>
+        <div class="hint">月预算总额</div>
+      </div>
+      <div class="kpi">
+        <div class="label">本月支出</div>
+        <div class="value" id="exp-total">¥ 0</div>
+        <div class="hint" id="exp-total-hint">0 笔</div>
       </div>
       <div class="kpi">
         <div class="label">心愿已花</div>
@@ -951,9 +956,9 @@
         <div class="hint">上限 350 元</div>
       </div>
       <div class="kpi">
-        <div class="label">心愿剩余</div>
-        <div class="value" id="exp-remaining">¥ 350</div>
-        <div class="hint">足够时定投可达 800</div>
+        <div class="label">本月结余</div>
+        <div class="value" id="exp-remaining">¥ 1,360</div>
+        <div class="hint" id="exp-remaining-hint">收入 − 支出</div>
       </div>
       <div class="kpi">
         <div class="label">建议定投</div>
@@ -971,8 +976,10 @@
         <div>
           <label>类别</label>
           <select id="exp-cat">
+            <option value="吃饭">吃饭</option>
+            <option value="交通">交通</option>
+            <option value="日用">日用</option>
             <option value="心愿">心愿</option>
-            <option value="生活">生活</option>
             <option value="学习">学习</option>
             <option value="其他">其他</option>
           </select>
@@ -998,6 +1005,7 @@
           <button id="exp-next" title="下个月">›</button>
         </div>
       </div>
+      <div id="exp-breakdown" style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg-elevated);"></div>
       <div id="exp-rows"></div>
     </div>
   </section>
@@ -1067,10 +1075,16 @@ const DEFAULT_STATE = {
 };
 
 const EXP_CATS = {
+  '吃饭': { color: '#D67D3E', budget: 1200 },
+  '交通': { color: '#4F7A99', budget: 100 },
+  '日用': { color: '#6B8FA8', budget: 100 },
   '心愿': { color: '#A8423E', budget: 350 },
-  '生活': { color: '#4F7A99', budget: 0 },     // 由父母补贴覆盖，不计入个人预算
-  '学习': { color: '#B8893A', budget: 0 },     // 大额由父母额外报销
-  '其他': { color: '#6B6258', budget: 0 },
+  '学习': { color: '#B8893A', budget: 100 },
+  '其他': { color: '#6B6258', budget: 150 },
+};
+// 旧类别 → 新类别（数据迁移用）
+const CAT_MIGRATION = {
+  '生活': '吃饭',   // 旧"生活"默认归到"吃饭"，可在每条记录上手动改
 };
 const PERSONAL_INCOME = 1000;       // 主动收入（自己赚的）
 const TOTAL_BUDGET = 4000;          // 月可用总额（主动 + 父母）
@@ -1083,7 +1097,16 @@ let state = loadState();
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return Object.assign({}, DEFAULT_STATE, JSON.parse(raw));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // 旧类别迁移
+      if (parsed.expenses) {
+        for (const e of parsed.expenses) {
+          if (CAT_MIGRATION[e.cat]) e.cat = CAT_MIGRATION[e.cat];
+        }
+      }
+      return Object.assign({}, DEFAULT_STATE, parsed);
+    }
   } catch (e) {}
   return JSON.parse(JSON.stringify(DEFAULT_STATE));
 }
@@ -1301,16 +1324,25 @@ function renderExpenses() {
   document.getElementById('exp-month-label').textContent = month;
 
   const monthExp = state.expenses.filter(e => e.date && e.date.slice(0, 7) === month);
+  const totalSpent = monthExp.reduce((s, e) => s + e.amt, 0);
   const heartSpent = monthExp.filter(e => e.cat === '心愿').reduce((s, e) => s + e.amt, 0);
-  const remaining = HEART_BUDGET - heartSpent;
   const heartPct = HEART_BUDGET ? (heartSpent / HEART_BUDGET) * 100 : 0;
 
-  // KPI
-  document.getElementById('exp-income').textContent = fmt(TOTAL_BUDGET);
-  document.getElementById('exp-spent').textContent = fmt(heartSpent);
-  document.getElementById('exp-remaining').textContent = fmt(Math.max(0, HEART_BUDGET - heartSpent));
+  // 按类别小计（用于列表下方"分项"展示）
+  const byCat = {};
+  for (const e of monthExp) {
+    byCat[e.cat] = (byCat[e.cat] || 0) + e.amt;
+  }
 
-  // Bar
+  // KPI: 收入 / 总支出 / 心愿 / 结余 / 定投建议
+  document.getElementById('exp-income').textContent = fmt(TOTAL_BUDGET);
+  document.getElementById('exp-total').textContent = fmt(totalSpent);
+  document.getElementById('exp-total-hint').textContent = `${monthExp.length} 笔`;
+  document.getElementById('exp-spent').textContent = fmt(heartSpent);
+  document.getElementById('exp-remaining').textContent = fmt(TOTAL_BUDGET - totalSpent);
+  document.getElementById('exp-remaining-hint').textContent = totalSpent > TOTAL_BUDGET ? '已超支' : '收入 − 支出';
+
+  // 心愿进度条
   const bar = document.getElementById('exp-bar');
   bar.style.width = Math.min(100, heartPct).toFixed(1) + '%';
   bar.classList.remove('warn', 'alert');
@@ -1333,18 +1365,59 @@ function renderExpenses() {
     return;
   }
   const sorted = monthExp.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const catOpts = Object.keys(EXP_CATS).map(c => `<option value="${c}">${c}</option>`).join('');
+
+  // 分项小计
+  const breakdown = document.getElementById('exp-breakdown');
+  if (Object.keys(byCat).length === 0) {
+    breakdown.innerHTML = '<div style="color:var(--text-subtle);font-size:12px;text-align:center;">分项小计会在你记账后出现</div>';
+  } else {
+    breakdown.innerHTML = Object.entries(byCat)
+      .sort((a, b) => b[1] - a[1])
+      .map(([c, v]) => {
+        const meta = EXP_CATS[c] || { color: '#6B6258', budget: 0 };
+        const pct = meta.budget ? Math.min(100, (v / meta.budget) * 100).toFixed(0) : null;
+        const overBudget = meta.budget && v > meta.budget;
+        return `
+          <div style="display:grid;grid-template-columns:60px 1fr 110px;align-items:center;gap:10px;margin-bottom:6px;font-size:12px;">
+            <span style="display:inline-flex;align-items:center;gap:6px;color:${overBudget ? 'var(--alert)' : 'var(--text)'};">
+              <span style="width:8px;height:8px;border-radius:50%;background:${meta.color}"></span>
+              ${c}${overBudget ? ' ⚠️' : ''}
+            </span>
+            <div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden;">
+              <div style="height:100%;width:${pct || (v/Math.max(...Object.values(byCat))*100)}%;background:${meta.color};opacity:${pct ? '0.85' : '0.4'};"></div>
+            </div>
+            <span style="font-family:var(--mono);text-align:right;color:${overBudget ? 'var(--alert)' : 'var(--text)'};">¥ ${v.toLocaleString('zh-CN')}${meta.budget ? ` / ${meta.budget}` : ''}</span>
+          </div>
+        `;
+      }).join('');
+  }
   rows.innerHTML = sorted.map(e => {
     const meta = EXP_CATS[e.cat] || { color: '#6B6258' };
     return `
       <div class="exp-row">
         <div class="date">${e.date || ''}</div>
-        <div><span class="cat-tag" style="background:${meta.color}">${e.cat}</span></div>
+        <div><select class="cat-edit" data-id="${e.id}" style="font-size:11px;padding:2px 6px;border-radius:999px;background:${meta.color};color:#fff;border:none;font-weight:500;">${catOpts.replace(`value="${e.cat}"`, `value="${e.cat}" selected`)}</select></div>
         <div class="note">${e.note || ''}</div>
         <div class="amt">¥ ${e.amt.toLocaleString('zh-CN')}</div>
         <button class="del" data-id="${e.id}" title="删除">×</button>
       </div>
     `;
   }).join('');
+  // 类别编辑
+  rows.querySelectorAll('.cat-edit').forEach(sel => {
+    sel.addEventListener('change', e => {
+      const id = e.target.dataset.id;
+      const newCat = e.target.value;
+      const item = state.expenses.find(x => x.id === id);
+      if (item) {
+        item.cat = newCat;
+        saveState();
+        renderExpenses();
+        toast(`已改类别为「${newCat}」`);
+      }
+    });
+  });
   rows.querySelectorAll('.del').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.id;
